@@ -4,7 +4,6 @@ Description=Snotify user daemon
 [Service]
 ExecStart=/usr/bin/snotify
 Restart=always
-User=%i
 RestartSec=10
 
 [Install]
