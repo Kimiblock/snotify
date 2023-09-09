@@ -1,7 +1,0 @@
-[Desktop Entry]
-Name=Snotify
-Comment=Play sounds when reciving a notification
-Terminal=false
-Type=Application
-StartupNotify=false
-Categories=System;Utility;
