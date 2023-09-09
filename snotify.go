@@ -82,6 +82,7 @@ func playSound() {
 func main() {
 	go monitorDbus()       // Start monitoring dbus in a goroutine
 	go playSoundOnNewLine() // Start checking for new lines and playing sound in a goroutine
-	fmt.Println("Press Enter to exit.")
-	fmt.Scanln() // Wait for Enter key to exit
+
+	// The program will run indefinitely without waiting for Enter key input
+	select {}
 }
