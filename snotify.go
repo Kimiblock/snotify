@@ -68,7 +68,7 @@ func playSoundOnNewLine() {
 }
 
 func playSound() {
-	soundCmd := exec.Command("/usr/bin/paplay", "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga")
+	soundCmd := exec.Command("/usr/bin/paplay", "/opt/snotify/message.ogg")
 	if err := soundCmd.Start(); err != nil {
 		fmt.Println("Error playing sound:", err)
 		return
