@@ -1,5 +1,7 @@
 # Snotify
 
+[![Go](https://github.com/Kimiblock/snotify/actions/workflows/go.yml/badge.svg)](https://github.com/Kimiblock/snotify/actions/workflows/go.yml)
+
 Notifications, with sound.
 
 # Packages
@@ -8,4 +10,8 @@ Notifications, with sound.
 
 # Usage
 
-Install the AUR package, then enable **user** service `snotify.service`
+Install the AUR package, then enable **user** service `snotify.service`.
+
+# Credits
+
+SchildiChat for the notification sound.
