@@ -2,6 +2,7 @@
 Description=Snotify user daemon
 
 [Service]
+ExecStartPre=/usr/bin/sleep 1s
 ExecStart=/usr/bin/snotify
 Restart=always
 RestartSec=1
