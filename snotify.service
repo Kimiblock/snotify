@@ -4,7 +4,8 @@ Description=Snotify user daemon
 [Service]
 ExecStart=/usr/bin/snotify
 Restart=always
-RestartSec=10
+RestartSec=1
+MemoryMax=20M
 
 [Install]
 WantedBy=default.target
