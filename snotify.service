@@ -1,8 +1,8 @@
 [Unit]
 Description=Snotify user daemon
+After=dbus.service
 
 [Service]
-ExecStartPre=/usr/bin/sleep 1s
 ExecStart=/usr/bin/snotify
 Restart=always
 RestartSec=1
