@@ -14,4 +14,4 @@ Install the AUR package, then enable **user** service `snotify.service`.
 
 # Credits
 
-SchildiChat for the notification sound.
+Cinny for the notification sound.
