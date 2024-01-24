@@ -6,6 +6,7 @@ After=dbus.service
 ExecStart=/usr/bin/snotify
 Restart=always
 RestartSec=1
+MemoryHigh=16M
 MemoryMax=20M
 
 [Install]
