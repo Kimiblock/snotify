@@ -10,6 +10,8 @@ MemoryHigh=16M
 MemoryMax=20M
 OOMPolicy=kill
 
+CPUQuota=3%
+
 
 CapabilityBoundingSet=
 AmbientCapabilities=
@@ -24,7 +26,6 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
-RestrictAddressFamilies=
 RestrictNamespaces=yes
 LockPersonality=yes
 MemoryDenyWriteExecute=yes
@@ -32,6 +33,17 @@ RestrictRealtime=yes
 RestrictSUIDSGID=yes
 RemoveIPC=yes
 SystemCallArchitectures=native
+UMask=0600
+
+SystemCallFilter=~@reboot
+SystemCallFilter=~@raw-io
+SystemCallFilter=~@privileged
+SystemCallFilter=~@mount
+SystemCallFilter=~@module
+SystemCallFilter=~@debug
+SystemCallFilter=~@cpu-emulation
+PrivateUsers=yes
+PrivateNetwork=yes
 
 [Install]
 WantedBy=default.target
