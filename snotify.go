@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 )
@@ -13,9 +12,9 @@ var (
 	lastLine string
 )
 
-func monitorDbus() {
+func monitorDbus(path, member string) {
 	for {
-		cmd := exec.Command("dbus-monitor", "path='/org/freedesktop/Notifications',interface='org.freedesktop.Notifications',member='Notify'")
+		cmd := exec.Command("dbus-monitor", fmt.Sprintf("path='%s',member='%s'", path, member))
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			fmt.Println("Error creating stdout pipe:", err)
@@ -37,12 +36,11 @@ func monitorDbus() {
 			}
 
 			line := string(buf[:n])
-			if strings.Contains(line, "member=Notify") {
-				// Lock the mutex to safely update lastLine
-				mu.Lock()
-				lastLine = line
-				mu.Unlock()
-			}
+
+			// Lock the mutex to safely update lastLine
+			mu.Lock()
+			lastLine = line
+			mu.Unlock()
 		}
 
 		// Wait for the command to finish
@@ -51,12 +49,12 @@ func monitorDbus() {
 		}
 
 		// Sleep for a while before restarting dbus-monitor
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
 func playSoundOnNewLine() {
-	ticker := time.NewTicker(400 * time.Millisecond)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -66,7 +64,7 @@ func playSoundOnNewLine() {
 		mu.Unlock()
 
 		if currentLine != "" {
-			fmt.Println("Received a Notify event. Playing sound...")
+			fmt.Println("Received a Notify or AddNotification event. Playing sound...")
 			playSound()
 
 			// Clear lastLine to prevent repeated execution
@@ -78,7 +76,7 @@ func playSoundOnNewLine() {
 }
 
 func playSound() {
-	soundCmd := exec.Command("/usr/bin/paplay", "/opt/snotify/message.ogg")
+	soundCmd := exec.Command("mpv", "--no-config", "--really-quiet", "/opt/snotify/message.ogg")
 	if err := soundCmd.Start(); err != nil {
 		fmt.Println("Error playing sound:", err)
 		return
@@ -90,8 +88,9 @@ func playSound() {
 }
 
 func main() {
-	go monitorDbus()       // Start monitoring dbus in a goroutine
-	go playSoundOnNewLine() // Start checking for new lines and playing sound in a goroutine
+	go monitorDbus("/org/freedesktop/Notifications", "Notify") // Start monitoring dbus for the first path and member
+	go monitorDbus("/org/gtk/Notifications", "AddNotification") // Start monitoring dbus for the second path and member
+	go playSoundOnNewLine()                           // Start checking for new lines and playing sound in a goroutine
 
 	// The program will run indefinitely without waiting for Enter key input
 	select {}
