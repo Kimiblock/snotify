@@ -26,7 +26,7 @@ func monitorDbus(path, member string) {
 			return
 		}
 
-		buf := make([]byte, 20480000) // Super large buffer to prevent apps screwing up snotify
+		buf := make([]byte, 2048) // Limit the line length to 2048 bytes
 
 		for {
 			n, err := stdout.Read(buf)
