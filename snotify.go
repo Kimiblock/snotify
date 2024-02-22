@@ -26,7 +26,7 @@ func monitorDbus(path, member string) {
 			return
 		}
 
-		buf := make([]byte, 512) // Limit the line length to 1024 bytes
+		buf := make([]byte, 2048) // Limit the line length to 2048 bytes
 
 		for {
 			n, err := stdout.Read(buf)
@@ -54,7 +54,7 @@ func monitorDbus(path, member string) {
 }
 
 func playSoundOnNewLine() {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(600 * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {
