@@ -26,7 +26,7 @@ func monitorDbus(path, member string) {
 			return
 		}
 
-		buf := make([]byte, 2048) // Limit the line length to 2048 bytes
+		buf := make([]byte, 512) // Limit the line length to 512 bytes
 
 		for {
 			n, err := stdout.Read(buf)
