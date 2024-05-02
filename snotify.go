@@ -76,7 +76,7 @@ func playSoundOnNewLine() {
 }
 
 func playSound() {
-	soundCmd := exec.Command("mpv", "--no-config", "--really-quiet", "--volume=80", "/opt/snotify/message.ogg")
+	soundCmd := exec.Command("mpv", "--no-config", "--volume=80", "/opt/snotify/message.ogg")
 	if err := soundCmd.Start(); err != nil {
 		fmt.Println("Error playing sound:", err)
 		return
