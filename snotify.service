@@ -10,7 +10,7 @@ MemoryHigh=16M
 MemoryMax=30M
 OOMPolicy=kill
 
-CPUQuota=1%
+#CPUQuota=1%
 CPUWeight=1
 
 CapabilityBoundingSet=
