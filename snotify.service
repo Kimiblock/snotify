@@ -1,6 +1,7 @@
 [Unit]
-Description=Snotify user daemon
+Description=Audible Notifications
 After=dbus.service
+Requires=pipewire.service
 
 [Service]
 ExecStart=/usr/bin/snotify
