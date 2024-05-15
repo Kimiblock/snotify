@@ -54,7 +54,7 @@ func monitorDbus(path, member string) {
 }
 
 func playSoundOnNewLine() {
-	ticker := time.NewTicker(750 * time.Millisecond)
+	ticker := time.NewTicker(900 * time.Millisecond)
 	defer ticker.Stop()
 
 	for range ticker.C {
