@@ -12,10 +12,10 @@ Audible Notifications.
 
 # Usage
 
-Requires Pipewire sound server.
+**Requires _Pulse / PipeWire_ sound server.**
 
 Install the AUR package, then enable **user** service `snotify.service`.
 
 # Credits
 
-Cinny for the notification sound.
+- Material Sounds
