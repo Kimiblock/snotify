@@ -76,7 +76,7 @@ func playSoundOnNewLine() {
 }
 
 func playSound() {
-	soundCmd := exec.Command("pw-play", "/opt/snotify/message.ogg")
+	soundCmd := exec.Command("paplay", "/opt/snotify/message.ogg", "--client-name=snotify")
 	if err := soundCmd.Start(); err != nil {
 		fmt.Println("Error playing sound:", err)
 		return
