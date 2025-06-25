@@ -6,7 +6,7 @@ Audible Notifications.
 
 # Packages
 
-[AUR](https://aur.archlinux.org/packages/snotify)
+[AUR & archlinuxcn](https://aur.archlinux.org/packages/snotify)
 
 [AUR (Git)](https://aur.archlinux.org/packages/snotify-git)
 
