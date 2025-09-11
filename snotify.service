@@ -2,6 +2,7 @@
 Description=Audible Notifications
 After=dbus.service
 Requires=pipewire.service
+ConditionUser=!@system
 
 [Service]
 ExecStart=/usr/bin/snotify
