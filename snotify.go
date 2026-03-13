@@ -106,7 +106,10 @@ func audioController() {
 	reader := pulse.Float32Reader(func(f []float32) (int, error) {
 		return readerFile.Read(f)
 	})
-	playback, err := client.NewPlayback(reader)
+	playback, err := client.NewPlayback(
+		reader,
+		pulse.PlaybackLatency(0.5),
+	)
 	if err != nil {
 		log.Fatalln("Could not request PulseAudio playback:", err)
 	}
