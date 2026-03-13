@@ -2,13 +2,17 @@ package main
 
 import (
 	"log"
+	"os"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/jfreymuth/oggvorbis"
+	"github.com/jfreymuth/pulse"
 )
 
 const (
 	version		float64		= 1.0
+	oggFile		string		= "message.ogg"
 )
 
 var (
@@ -57,7 +61,7 @@ func legacyNotifWatcher() () {
 			&body.Hints,
 			&body.Expire,
 		)
-		if lastMsg.Body == body.Body && lastMsg.App == body.App {
+		if lastMsg.Body == body.Body && lastMsg.App == body.App && lastMsg.Summary == body.Summary {
 			log.Println("Skipping duplicate notification")
 			continue
 		}
@@ -65,7 +69,7 @@ func legacyNotifWatcher() () {
 		if err != nil {
 			log.Println("Could not decode legacy notification:", err)
 		}
-		log.Println(body.App, "sent legacy notification")
+		log.Println(body.App, "sent legacy notification:", body)
 		busSigChan <- con
 	}
 }
@@ -81,8 +85,43 @@ type classicNotifBody struct {
 	Expire		int32
 }
 
+func audioController() {
+	client, err := pulse.NewClient(
+		pulse.ClientApplicationName("Snotify Notification Sounds"),
+		pulse.ClientApplicationIconName("notifications-new-symbolic"),
+	)
+	if err != nil {
+		log.Fatalln("Could not connect to PulseAudio:", err)
+	}
+	file, err := os.Open(oggFile)
+	if err != nil {
+		log.Fatalln("Could not open audio message file:", err)
+	}
+	defer file.Close()
+	readerFile, err := oggvorbis.NewReader(file)
+	if err != nil {
+		log.Fatalln("Could not read audio message file:", err)
+	}
+
+	reader := pulse.Float32Reader(func(f []float32) (int, error) {
+		return readerFile.Read(f)
+	})
+	playback, err := client.NewPlayback(reader)
+	if err != nil {
+		log.Fatalln("Could not request PulseAudio playback:", err)
+	}
+	defer playback.Close()
+	for sig := range busSigChan {
+		playback.Stop()
+		readerFile.SetPosition(0)
+		log.Println("Playing sound for:", sig)
+		go playback.Start()
+	}
+}
+
 func main() {
 	log.Println("Starting snotify, version", version)
+	go audioController()
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		legacyNotifWatcher()
