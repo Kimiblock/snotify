@@ -2,4 +2,6 @@ module snotify
 
 go 1.21.0
 
-require github.com/godbus/dbus v4.1.0+incompatible
+require github.com/godbus/dbus/v5 v5.2.2
+
+require golang.org/x/sys v0.27.0 // indirect

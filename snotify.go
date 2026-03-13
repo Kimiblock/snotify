@@ -1,97 +1,92 @@
 package main
 
 import (
-	"fmt"
-	"os/exec"
+	"log"
 	"sync"
-	"time"
+
+	"github.com/godbus/dbus/v5"
+)
+
+const (
+	version		float64		= 1.0
 )
 
 var (
-	mu       sync.Mutex
-	lastLine string
+	busSigChan			= make(chan notif, 16)
 )
 
-func monitorDbus(path, member string) {
-	for {
-		cmd := exec.Command("dbus-monitor", fmt.Sprintf("path='%s',member='%s'", path, member))
-		stdout, err := cmd.StdoutPipe()
+type notif struct {
+	Type		string
+}
+
+func getConn() (conn *dbus.Conn) {
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		log.Fatalln("Could not connect to session bus:", err)
+	}
+	return conn
+}
+
+func legacyNotifWatcher() () {
+	conn := getConn()
+	monitorObj := conn.Object("org.freedesktop.DBus", "/org/freedesktop/DBus")
+	ruleSlice := []string{
+		"type='method_call',interface='org.freedesktop.Notifications',member='Notify',path='/org/freedesktop/Notifications',destination='org.freedesktop.Notifications'",
+		//"type='method_call',member='Notify',path='/org/freedesktop/Notifications',interface='org.freedesktop.Notifications'",
+	}
+	arg2 := uint(0)
+	call := monitorObj.Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, ruleSlice, arg2)
+	if call.Err != nil {
+		log.Fatalln("Could not become bus monitor:", call.Err)
+	} else {
+		log.Println("Bus replied:", call.Body)
+	}
+	var sigChan = make(chan *dbus.Message, 16)
+	conn.Eavesdrop(sigChan)
+	var lastMsg classicNotifBody
+	for sig := range sigChan {
+		var con notif
+		var body classicNotifBody
+		err := dbus.Store(sig.Body,
+			&body.App,
+			&body.ReplaceID,
+			&body.Icon,
+			&body.Summary,
+			&body.Body,
+			&body.Actions,
+			&body.Hints,
+			&body.Expire,
+		)
+		if lastMsg.Body == body.Body && lastMsg.App == body.App {
+			log.Println("Skipping duplicate notification")
+			continue
+		}
+		lastMsg = body
 		if err != nil {
-			fmt.Println("Error creating stdout pipe:", err)
-			return
+			log.Println("Could not decode legacy notification:", err)
 		}
-
-		if err := cmd.Start(); err != nil {
-			fmt.Println("Error starting dbus-monitor:", err)
-			return
-		}
-
-		buf := make([]byte, 512) // Limit the line length to 512 bytes
-
-		for {
-			n, err := stdout.Read(buf)
-			if err != nil {
-				fmt.Println("Error reading from dbus-monitor:", err)
-				break
-			}
-
-			line := string(buf[:n])
-
-			// Lock the mutex to safely update lastLine
-			mu.Lock()
-			lastLine = line
-			mu.Unlock()
-		}
-
-		// Wait for the command to finish
-		if err := cmd.Wait(); err != nil {
-			fmt.Println("dbus-monitor exited with an error:", err)
-		}
-
-		// Sleep for a while before restarting dbus-monitor
-		time.Sleep(5 * time.Second)
+		log.Println(body.App, "sent legacy notification")
+		busSigChan <- con
 	}
 }
 
-func playSoundOnNewLine() {
-	ticker := time.NewTicker(900 * time.Millisecond)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// Lock the mutex to safely read lastLine
-		mu.Lock()
-		currentLine := lastLine
-		mu.Unlock()
-
-		if currentLine != "" {
-			fmt.Println("Received a Notify or AddNotification event. Playing sound...")
-			playSound()
-
-			// Clear lastLine to prevent repeated execution
-			mu.Lock()
-			lastLine = ""
-			mu.Unlock()
-		}
-	}
-}
-
-func playSound() {
-	soundCmd := exec.Command("paplay", "/opt/snotify/message.ogg", "--client-name=snotify")
-	if err := soundCmd.Start(); err != nil {
-		fmt.Println("Error playing sound:", err)
-		return
-	}
-
-	if err := soundCmd.Wait(); err != nil {
-		fmt.Println("Error waiting for sound:", err)
-	}
+type classicNotifBody struct {
+	App		string
+	ReplaceID	uint32
+	Icon		string
+	Summary		string
+	Body		string
+	Actions		[]string
+	Hints		map[string]dbus.Variant
+	Expire		int32
 }
 
 func main() {
-	go monitorDbus("/org/freedesktop/Notifications", "Notify") // Start monitoring dbus for the first path and member
-	go monitorDbus("/org/gtk/Notifications", "AddNotification") // Start monitoring dbus for the second path and member
-	go playSoundOnNewLine()                           // Start checking for new lines and playing sound in a goroutine
+	log.Println("Starting snotify, version", version)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		legacyNotifWatcher()
+	})
 
-	// The program will run indefinitely without waiting for Enter key input
-	select {}
+	wg.Wait()
 }
