@@ -108,6 +108,8 @@ func audioController() {
 	})
 	playback, err := client.NewPlayback(
 		reader,
+		pulse.PlaybackSampleRate(readerFile.SampleRate()),
+		//pulse.PlaybackStereo,
 		pulse.PlaybackLatency(0.5),
 	)
 	if err != nil {
