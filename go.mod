@@ -1,6 +1,6 @@
 module snotify
 
-go 1.21.0
+go 1.26.1
 
 require github.com/godbus/dbus/v5 v5.2.2
 
