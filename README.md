@@ -16,6 +16,8 @@ Audible Notifications.
 
 Install the AUR package, then enable **user** service `snotify.service`.
 
+By default the notification sound is `/opt/snotify/message.ogg`, but can be overriden by environment variable `SNOTIFY_OGG_FILE`
+
 # Credits
 
 - Material Sounds

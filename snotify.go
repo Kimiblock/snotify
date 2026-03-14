@@ -19,13 +19,13 @@ import (
 
 const (
 	version		float64		= 1.0
-	oggFile		string		= "message.ogg"
 )
 
 var (
 	busSigChan			= make(chan notif, 16)
 	soundAllowed			bool
 	dndLock				sync.RWMutex
+	oggFile				string
 )
 
 type notif struct {
@@ -271,6 +271,12 @@ func audioController() {
 
 func main() {
 	log.Println("Starting snotify, version", version)
+	envFile := os.Getenv("SNOTIFY_OGG_FILE")
+	if len(envFile) == 0 {
+		oggFile = "/opt/snotify/message.ogg"
+	} else {
+		oggFile = envFile
+	}
 	go audioController()
 	go dndWatcher()
 	var wg sync.WaitGroup
