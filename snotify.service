@@ -1,7 +1,7 @@
 [Unit]
 Description=Audible Notifications
-After=dbus.service
-Requires=pipewire.service
+After=dbus.service pulseaudio.service pipewire-pulse.service
+Wants=dbus.service pulseaudio.service pipewire-pulse.service
 ConditionUser=!@system
 
 [Service]
@@ -59,3 +59,4 @@ PrivateNetwork=yes
 
 [Install]
 WantedBy=default.target
+WantedBy=org.gnome.Shell@user.service
