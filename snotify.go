@@ -1,10 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/jfreymuth/oggvorbis"
@@ -18,6 +24,8 @@ const (
 
 var (
 	busSigChan			= make(chan notif, 16)
+	soundAllowed			bool
+	dndLock				sync.RWMutex
 )
 
 type notif struct {
@@ -42,6 +50,89 @@ type PortalNotification struct {
 	Body			string
 	Sound			bool
 	ID			string
+}
+
+func dndWatcher() () {
+	//conn := getConn()
+	env := os.Getenv("XDG_CURRENT_DESKTOP")
+	switch env {
+		case "GNOME":
+			valCmdSlice := []string{
+				"stdbuf",
+				"-oL",
+				"gsettings",
+				"monitor",
+				"org.gnome.desktop.notifications",
+				"show-banners",
+			}
+			getCmdSlice := []string{
+				"gsettings",
+				"get",
+				"org.gnome.desktop.notifications",
+				"show-banners",
+			}
+			cmd := exec.Command(valCmdSlice[0], valCmdSlice[1:]...)
+			attr := syscall.SysProcAttr{
+				Pdeathsig:	syscall.SIGTERM,
+			}
+			cmd.SysProcAttr = &attr
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func () {
+				pipe, err := cmd.StdoutPipe()
+				wg.Done()
+				if err != nil {
+					log.Println("GSettings failed:", err)
+					return
+				}
+				scanner := bufio.NewScanner(pipe)
+				cmdGet, err := exec.Command(getCmdSlice[0], getCmdSlice[1:]...).Output()
+				if err != nil {
+					log.Println("GSettings failed:", err)
+					return
+				}
+				line := string(cmdGet)
+				rawVal := strings.TrimSpace(line)
+				log.Println("Allow sound:", rawVal)
+				val, err := strconv.ParseBool(rawVal)
+				if err != nil {
+					log.Println("Could not parse result:", err)
+
+				} else {
+					dndLock.Lock()
+					soundAllowed = val
+					dndLock.Unlock()
+				}
+				for scanner.Scan() {
+					line := scanner.Text()
+					log.Println("Allow status changed:", line)
+					rawVal := strings.TrimPrefix(line, "show-banners:")
+					rawVal = strings.TrimSpace(rawVal)
+					val, err := strconv.ParseBool(rawVal)
+					if err != nil {
+						log.Println("Could not parse result:", err)
+						continue
+					}
+					dndLock.Lock()
+					soundAllowed = val
+					dndLock.Unlock()
+				}
+			} ()
+			wg.Wait()
+			err := cmd.Start()
+			if err != nil {
+				fmt.Println("Could not start DnD monitor:", err)
+				return
+			}
+			log.Println("Started DnD watcher")
+			err = cmd.Wait()
+			if err != nil {
+				fmt.Println("GSettings monitor returned error:", err)
+				return
+			}
+		default:
+			log.Println("Do not disturb unsupported:", env)
+	}
 }
 
 func legacyNotifWatcher() () {
@@ -164,6 +255,13 @@ func audioController() {
 	}
 	defer playback.Close()
 	for sig := range busSigChan {
+		dndLock.RLock()
+		if soundAllowed == false {
+			dndLock.RUnlock()
+			log.Println("Not playing sound with DnD")
+			continue
+		}
+		dndLock.RUnlock()
 		playback.Stop()
 		readerFile.SetPosition(0)
 		log.Println("Playing sound for:", sig)
@@ -174,6 +272,7 @@ func audioController() {
 func main() {
 	log.Println("Starting snotify, version", version)
 	go audioController()
+	go dndWatcher()
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		legacyNotifWatcher()
