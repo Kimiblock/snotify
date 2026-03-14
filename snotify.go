@@ -184,6 +184,7 @@ func legacyNotifWatcher() () {
 			con.ID = body.App
 			if lastMsg.Body == body.Body && lastMsg.App == body.App && lastMsg.Summary == body.Summary {
 				log.Println("Skipping duplicate notification")
+				lastMsg = classicNotifBody{}
 				continue
 			}
 			lastMsg = body
