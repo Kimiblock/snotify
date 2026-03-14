@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -21,6 +22,7 @@ var (
 
 type notif struct {
 	Type		string
+	ID		string
 }
 
 func getConn() (conn *dbus.Conn) {
@@ -31,12 +33,24 @@ func getConn() (conn *dbus.Conn) {
 	return conn
 }
 
+type NotificationSound struct {
+	FileDescriptor dbus.UnixFD `db:"file-descriptor,omitempty"`
+}
+
+type PortalNotification struct {
+	Title			string
+	Body			string
+	Sound			bool
+	ID			string
+}
+
 func legacyNotifWatcher() () {
 	conn := getConn()
 	monitorObj := conn.Object("org.freedesktop.DBus", "/org/freedesktop/DBus")
 	ruleSlice := []string{
 		"type='method_call',interface='org.freedesktop.Notifications',member='Notify',path='/org/freedesktop/Notifications',destination='org.freedesktop.Notifications'",
-		//"type='method_call',member='Notify',path='/org/freedesktop/Notifications',interface='org.freedesktop.Notifications'",
+		//"type='method_call',interface='org.gtk.Notifications',member='AddNotification',path='/org/gtk/Notifications',destination='org.gtk.Notifications'", // GTK's notif API, do we really need those?
+		"type='method_call',interface='org.freedesktop.portal.Notification',member='AddNotification',path='/org/freedesktop/portal/desktop',destination='org.freedesktop.portal.Desktop'",
 	}
 	arg2 := uint(0)
 	call := monitorObj.Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, ruleSlice, arg2)
@@ -48,6 +62,7 @@ func legacyNotifWatcher() () {
 	var sigChan = make(chan *dbus.Message, 16)
 	conn.Eavesdrop(sigChan)
 	var lastMsg classicNotifBody
+	log.Println("Initialized D-Bus connection")
 	for sig := range sigChan {
 		var con notif
 		var body classicNotifBody
@@ -61,17 +76,49 @@ func legacyNotifWatcher() () {
 			&body.Hints,
 			&body.Expire,
 		)
-		if lastMsg.Body == body.Body && lastMsg.App == body.App && lastMsg.Summary == body.Summary {
-			log.Println("Skipping duplicate notification")
-			continue
-		}
-		lastMsg = body
+
 		if err != nil {
-			log.Println("Could not decode legacy notification:", err)
+			notif, err := decodePortalNotif(sig)
+			if err != nil {
+				log.Println("Could not decode Portal notification:", err)
+				continue
+			}
+			con.Type = "Portal"
+			con.ID = notif.ID
+			if notif.Sound {
+				log.Println("Portal notification has sound, suppressing ours")
+			}
+		} else {
+			con.Type = "legacy"
+			con.ID = body.App
+			if lastMsg.Body == body.Body && lastMsg.App == body.App && lastMsg.Summary == body.Summary {
+				log.Println("Skipping duplicate notification")
+				continue
+			}
+			lastMsg = body
 		}
-		log.Println(body.App, "sent legacy notification:", body)
+		log.Println(con.ID, "sent", con.Type,"notification:", body)
 		busSigChan <- con
 	}
+}
+
+func decodePortalNotif(con *dbus.Message) (PortalNotification, error) {
+	var m = make(map[string]dbus.Variant)
+	var notif PortalNotification
+	err := dbus.Store(con.Body, &notif.ID, &m)
+	if err != nil {
+		return notif, errors.New("Could not store message: " + err.Error())
+	}
+	val, ok := m["priority"]
+	if ok {
+		log.Println("Portal notification priority:", val)
+	}
+	_, ok = m["sound"]
+	if ok {
+		notif.Sound = true
+	}
+
+	return notif, nil
 }
 
 type classicNotifBody struct {
