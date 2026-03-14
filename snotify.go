@@ -142,6 +142,7 @@ func legacyNotifWatcher() () {
 		"type='method_call',interface='org.freedesktop.Notifications',member='Notify',path='/org/freedesktop/Notifications',destination='org.freedesktop.Notifications'",
 		//"type='method_call',interface='org.gtk.Notifications',member='AddNotification',path='/org/gtk/Notifications',destination='org.gtk.Notifications'", // GTK's notif API, do we really need those?
 		"type='method_call',interface='org.freedesktop.portal.Notification',member='AddNotification',path='/org/freedesktop/portal/desktop',destination='org.freedesktop.portal.Desktop'",
+		"type='method_call',interface='org.gtk.Notifications',member='AddNotification',path='/org/gtk/Notifications',destination='org.gtk.Notifications'",
 	}
 	arg2 := uint(0)
 	call := monitorObj.Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, ruleSlice, arg2)
@@ -171,14 +172,22 @@ func legacyNotifWatcher() () {
 		if err != nil {
 			notif, err := decodePortalNotif(sig)
 			if err != nil {
-				log.Println("Could not decode Portal notification:", err)
-				continue
+				notif, err := decodeGTKNotif(sig)
+				if err != nil {
+					log.Println("Could not decode notification: tried Legacy, Portal and GTK:", err)
+					continue
+				}
+				con.ID = notif.ID
+				con.Type = "GTK"
+			} else {
+				con.Type = "Portal"
+				con.ID = notif.ID
+				if notif.Sound {
+					log.Println("Portal notification has sound, suppressing ours")
+					continue
+				}
 			}
-			con.Type = "Portal"
-			con.ID = notif.ID
-			if notif.Sound {
-				log.Println("Portal notification has sound, suppressing ours")
-			}
+
 		} else {
 			con.Type = "legacy"
 			con.ID = body.App
@@ -192,6 +201,18 @@ func legacyNotifWatcher() () {
 		log.Println(con.ID, "sent", con.Type,"notification:", body)
 		busSigChan <- con
 	}
+}
+
+func decodeGTKNotif(msg *dbus.Message) (PortalNotification, error) {
+	var m = make(map[string]dbus.Variant)
+	var notif PortalNotification
+	var title string
+	err := dbus.Store(msg.Body, &notif.ID, &title, &m)
+	if err != nil {
+		return notif, errors.New("Could not store message: " + err.Error())
+	}
+	notif.Title = title
+	return notif, nil
 }
 
 func decodePortalNotif(con *dbus.Message) (PortalNotification, error) {
