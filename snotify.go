@@ -80,7 +80,7 @@ func dndWatcher() () {
 			wg.Add(1)
 			go func () {
 				pipe, err := cmd.StdoutPipe()
-				wg.Done()
+				wg.Wait()
 				if err != nil {
 					log.Println("GSettings failed:", err)
 					return
@@ -118,7 +118,7 @@ func dndWatcher() () {
 					dndLock.Unlock()
 				}
 			} ()
-			wg.Wait()
+			wg.Done()
 			err := cmd.Start()
 			if err != nil {
 				fmt.Println("Could not start DnD monitor:", err)
