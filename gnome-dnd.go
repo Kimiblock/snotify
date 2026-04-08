@@ -11,6 +11,13 @@ import (
 )
 
 func monitorGNOMEDND() {
+	cmdline := []string{"monitor", "org.gnome.desktop.notifications", "show-banners"}
+	cmd := exec.Command("gsettings", cmdline...)
+	attrs := syscall.SysProcAttr{
+		Pdeathsig:	syscall.SIGTERM,
+	}
+	cmd.SysProcAttr = &attrs
+	cmd.Start()
 	go updateDnd()
 	type sigChange struct {
 		prefix	string
