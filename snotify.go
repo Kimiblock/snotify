@@ -53,6 +53,7 @@ func dndWatcher() () {
 		case "GNOME":
 			monitorGNOMEDND()
 		default:
+			soundAllowed = true
 			log.Println("Do not disturb unsupported:", env)
 	}
 }
