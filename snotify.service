@@ -5,6 +5,7 @@ Wants=dbus.service pulseaudio.service pipewire-pulse.service
 ConditionUser=!@system
 
 [Service]
+Slice=background.slice
 ExecStart=/usr/bin/snotify
 Restart=always
 RestartSec=1s
